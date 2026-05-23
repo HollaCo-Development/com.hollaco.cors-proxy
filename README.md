@@ -35,4 +35,4 @@ Requires Azure Functions Core Tools v4: `npm install -g azure-functions-core-too
 
 ## Deploy
 
-GitHub Actions deploys on push to `main`. First-time Azure setup walkthrough: [docs/setup-conventions.md](docs/setup-conventions.md).
+GitHub Actions deploys on push to `main`. First-time Azure setup (Function App creation, custom domain binding, publish profile) is documented in `docs/setup-conventions.md` (added in a later commit during this slice).

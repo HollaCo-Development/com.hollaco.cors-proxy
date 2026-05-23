@@ -5,3 +5,10 @@ bin/
 obj/
 .vscode/
 *.log
+
+# Vault Obsidian per-machine state
+HollaCo CORS Proxy/.obsidian/
+
+# OS
+.DS_Store
+Thumbs.db

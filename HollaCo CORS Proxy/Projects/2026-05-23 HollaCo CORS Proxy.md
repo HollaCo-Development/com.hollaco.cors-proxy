@@ -41,5 +41,5 @@ Created during HollaCo Command Center Phase 6.2 brainstorming once we discovered
 ## References
 
 - [[../Daily/2026-05-23 Bootstrap|Bootstrap journal]]
-- Setup walkthrough: [docs/setup-conventions.md](../../docs/setup-conventions.md)
+- Setup walkthrough: `docs/setup-conventions.md` (added in a later commit during this slice)
 - Consumer: [[../../../hollaco-command-center/HollaCo Command/Projects/2026-05-20 HollaCo Command Center|HollaCo Command Center]]
