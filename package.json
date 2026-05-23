@@ -1,0 +1,25 @@
+{
+  "name": "hollaco-cors-proxy",
+  "version": "0.1.0",
+  "description": "HollaCo CORS proxy — Azure Function that re-serves an allowlist of CORS-blocked public URLs with Access-Control-Allow-Origin: *. Consumed by HollaCo Command Center widget for n8n / Webflow / Statuspage.io probes.",
+  "type": "module",
+  "main": "src/functions/proxy.js",
+  "scripts": {
+    "start": "func start",
+    "typecheck": "tsc --noEmit -p jsconfig.json",
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.5.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.10.0",
+    "eslint": "^9.10.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

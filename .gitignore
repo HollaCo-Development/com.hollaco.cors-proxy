@@ -1,0 +1,7 @@
+node_modules/
+.azure/
+local.settings.json
+bin/
+obj/
+.vscode/
+*.log

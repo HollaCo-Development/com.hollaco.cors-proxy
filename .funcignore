@@ -1,0 +1,18 @@
+.git
+.github
+.vscode
+.azure
+node_modules/.cache
+src/**/__tests__
+docs
+HollaCo CORS Proxy
+README.md
+LICENSE
+AGENTS.md
+CLAUDE.md
+vitest.config.js
+eslint.config.mjs
+jsconfig.json
+local.settings.json
+local.settings.json.example
+.gitignore
