@@ -1,0 +1,20 @@
+name: Security audit (monthly)
+
+on:
+  schedule:
+    - cron: '0 14 1 * *'  # 1st of the month, 14:00 UTC
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: npm audit
+        run: npm audit --audit-level=moderate || echo "Vulnerabilities found — review at https://github.com/HollaCo-Development/com.hollaco.cors-proxy/security"
+        continue-on-error: true
