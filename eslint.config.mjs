@@ -43,9 +43,11 @@ export default [
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
         URL: 'readonly',
+        URLSearchParams: 'readonly',
         Response: 'readonly',
         Request: 'readonly',
-        console: 'readonly'
+        console: 'readonly',
+        global: 'readonly'
       }
     }
   }
