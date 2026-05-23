@@ -8,7 +8,7 @@ An Azure Function App that re-serves an allowlist of public URLs with `Access-Co
 
 ## Stack
 
-- Azure Functions v4 (Node.js 20 LTS, ES modules — `"type": "module"`)
+- Azure Functions v4 (Node.js 22 LTS, ES modules — `"type": "module"`)
 - Vitest + node environment for tests
 - ESLint flat config (`eslint.config.mjs`)
 - jsconfig + checkJs for type validation

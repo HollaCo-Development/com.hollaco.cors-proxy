@@ -18,7 +18,7 @@ Created during HollaCo Command Center Phase 6.2 brainstorming once we discovered
 
 ## Architecture
 
-- **Runtime:** Azure Functions v4, Node.js 20 LTS, Consumption plan (auto-scale to zero, free at our scale)
+- **Runtime:** Azure Functions v4, Node.js 22 LTS, Flex Consumption plan with 512 MB instance size (auto-scale to zero, free at our scale)
 - **Domain:** `proxy.hollaco.com` (custom, Azure managed SSL cert)
 - **API:** `GET /api/proxy?upstream=<allowlisted-key>` → upstream body + `Access-Control-Allow-Origin: *`
 - **Allowlist:** hardcoded in `src/upstreams.js`. Unknown keys return 400.

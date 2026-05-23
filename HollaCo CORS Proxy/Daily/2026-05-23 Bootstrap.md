@@ -14,7 +14,7 @@ Initial repo creation and first deploy of [[../Projects/2026-05-23 HollaCo CORS 
 
 ## What shipped
 
-- Azure Function App `hollaco-cors-proxy` on Consumption plan, Node.js 20 LTS, ES modules
+- Azure Function App `hollaco-cors-proxy` on Flex Consumption plan (512 MB instance), Node.js 22 LTS, ES modules
 - Custom domain `proxy.hollaco.com` with Azure managed SSL cert
 - Single HTTP-triggered function `proxy` at route `/api/proxy?upstream=<key>`
 - Hardcoded allowlist in `src/upstreams.js` (n8n-cloud-health live + anthropic-status/openai-status as Phase 6.x retrofit placeholders)
