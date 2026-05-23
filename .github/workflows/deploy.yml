@@ -10,6 +10,13 @@ env:
   AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'
   NODE_VERSION: '22.x'
 
+# OIDC token request needs id-token: write. contents: read is the
+# default but spelled out explicitly so the deploy permissions are
+# auditable in one place.
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   test-and-deploy:
     runs-on: ubuntu-latest
@@ -36,9 +43,17 @@ jobs:
       - name: Prune dev dependencies before deploy
         run: npm prune --omit=dev
 
+      - name: Azure login (OIDC via Entra federated credential)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: Deploy to Azure Functions
         uses: Azure/functions-action@v1
         with:
           app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+          sku: flexconsumption
+          remote-build: true
