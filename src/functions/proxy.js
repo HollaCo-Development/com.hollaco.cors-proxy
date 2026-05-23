@@ -30,7 +30,7 @@ export async function handler(req, ctx) {
     };
   }
 
-  const upstreamKey = req.query.get ? req.query.get('upstream') : req.query['upstream'];
+  const upstreamKey = req.query.get('upstream');
 
   if (!upstreamKey) {
     return jsonError(400, 'upstream query param required');
@@ -60,10 +60,7 @@ export async function handler(req, ctx) {
       signal: controller.signal
     });
     const body = await upstreamRes.text();
-    const contentType = (upstreamRes.headers.get
-      ? upstreamRes.headers.get('content-type')
-      : (upstreamRes.headers.get('content-type') || upstreamRes.headers['content-type']))
-      || 'application/octet-stream';
+    const contentType = upstreamRes.headers.get('content-type') || 'application/octet-stream';
     return {
       status: upstreamRes.status,
       headers: {
