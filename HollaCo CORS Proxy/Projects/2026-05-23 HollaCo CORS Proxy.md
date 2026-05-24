@@ -24,19 +24,23 @@ Created during HollaCo Command Center Phase 6.2 brainstorming once we discovered
 - **Allowlist:** hardcoded in `src/upstreams.js`. Unknown keys return 400.
 - **Auth:** none — every allowlisted upstream is already public.
 
-## Current upstreams (v0.1.0)
+## Current upstreams (v0.1.1)
 
 | Key | Upstream URL | Consumer |
 |---|---|---|
 | `n8n-cloud-health` | `https://holla.app.n8n.cloud/healthz` | Command Center widget Phase 6.2 (live) |
-| `anthropic-status` | `https://status.anthropic.com/api/v2/status.json` | Reserved for Command Center Phase 6.x retrofit |
-| `openai-status` | `https://status.openai.com/api/v2/status.json` | Reserved for Command Center Phase 6.x retrofit |
+| `vercel-status` | `https://www.vercel-status.com/api/v2/status.json` | Command Center widget Phase 6.2 (live) |
+| `expo-status` | `https://status.expo.dev/api/v2/status.json` | Command Center widget Phase 6.2 (live) |
+| `webflow-status` | `https://status.webflow.com/api/v2/status.json` | Command Center widget Phase 6.3 (live, v1.5.1) |
+| `anthropic-status` | `https://status.anthropic.com/api/v2/status.json` | Command Center widget Phase 6.3 retrofit (live, v1.5.1) |
+| `openai-status` | `https://status.openai.com/api/v2/status.json` | Allowlisted but widget direct-fetches (intentional — OpenAI Statuspage allows wildcard CORS) |
 
 ## Releases
 
 | Version | Date | Notes |
 |---|---|---|
 | 0.1.0 | 2026-05-23 | Initial release. n8n-cloud-health live, two retrofit placeholders in allowlist. |
+| 0.1.1 | 2026-05-24 | Added webflow-status allowlist entry. Reserved-comment block updated for Anthropic retrofit (widget v1.5.1 now consumes anthropic-status). |
 
 ## References
 
