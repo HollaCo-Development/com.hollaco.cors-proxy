@@ -164,7 +164,7 @@ Other verification commands:
 - `curl "https://proxy.hollaco.com/api/proxy?upstream=vercel-status"` → HTTP 200 with Vercel Statuspage v2 JSON
 - `curl "https://proxy.hollaco.com/api/proxy?upstream=expo-status"` → HTTP 200 with Expo Statuspage v2 JSON
 
-**Known: OPTIONS preflight currently returns 500** (likely Function App Platform CORS layer intercepting). Doesn't affect production usage because the widget's GET requests don't trigger preflight (no custom headers — they're CORS "simple requests"). Tracked for a v0.1.x follow-up.
+**OPTIONS preflight note:** real browser preflights (which always include both `Origin` AND `Access-Control-Request-Method` headers) get a clean **204 No Content** with the right CORS headers. The Azure Function App's Platform CORS layer short-circuits OPTIONS before our handler runs and answers preflights itself. A "bare" OPTIONS request (no `Access-Control-Request-Method` header — only produced by manual curl-style testing, never by a real browser) gets a 500. Cosmetic test artifact, not a production issue. Verify with `curl -X OPTIONS 'https://proxy.hollaco.com/api/proxy' -H 'Origin: https://hollaco.gallerycdn.vsassets.io' -H 'Access-Control-Request-Method: GET'` → 204.
 
 ## 5. Rotate OIDC credentials
 
@@ -184,8 +184,8 @@ Flex Consumption: pay only for executions. At ~6k req/day (HollaCo Command Cente
 
 ## Known issues / follow-ups (v0.1.0)
 
-- **OPTIONS preflight returns 500.** Doesn't affect production usage (widget uses simple GET requests, no preflight triggered). Likely Function App Platform CORS layer intercepting OPTIONS before our handler runs. Either configure Platform CORS to allow `*` (and remove our custom CORS handling) OR find a setting to disable Platform CORS entirely. Tracked for v0.1.1.
-- **SCM basic auth is currently ON** (was re-enabled during the publish-profile attempt before pivoting to OIDC). Now that OIDC works, can be turned back OFF: Function App → Settings → Configuration → General settings → "SCM Basic Auth Publishing Credentials" → Off. Tracked for v0.1.1.
-- **Leftover org-level secret** `AZURE_FUNCTIONAPP_PUBLISH_PROFILE` on `HollaCo-Development` org (visibility: Selected → com.hollaco.cors-proxy). No longer used by deploy.yml. Can be deleted: Organization Settings → Secrets and variables → Actions → AZURE_FUNCTIONAPP_PUBLISH_PROFILE → delete.
+- ~~**OPTIONS preflight returns 500.**~~ RESOLVED on inspection: bare OPTIONS without `Access-Control-Request-Method` 500s, but real browser preflights (which always include that header) get a clean 204. Cosmetic test artifact, not a production issue. See the OPTIONS preflight note in §4.
+- **SCM basic auth is currently ON** (was re-enabled during the publish-profile attempt before pivoting to OIDC). Now that OIDC works, can probably be turned back OFF: Function App → Settings → Configuration → General settings → "SCM Basic Auth Publishing Credentials" → Off. Caveat: `Azure/functions-action@v1` may rely on SCM endpoints to introspect deploy status even when auth is OIDC; if a subsequent deploy fails after toggling off, turn back on. Tracked for v0.1.1.
+- ~~**Leftover org-level secret** `AZURE_FUNCTIONAPP_PUBLISH_PROFILE`~~ DELETED 2026-05-24.
 - **Phase 6.x retrofit** — the widget's existing `statuspage.js` direct-fetches Anthropic and OpenAI. Anthropic is CORS-blocked (grey on dashboard); OpenAI works. The retrofit slice switches both to use this proxy (allowlist entries `anthropic-status` and `openai-status` are already in place).
 - **Phase 6.3** — add `webflow-sites` upstream + widget consumer for Webflow CMS health.
