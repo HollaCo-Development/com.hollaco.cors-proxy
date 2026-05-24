@@ -185,7 +185,7 @@ Flex Consumption: pay only for executions. At ~6k req/day (HollaCo Command Cente
 ## Known issues / follow-ups (v0.1.0)
 
 - ~~**OPTIONS preflight returns 500.**~~ RESOLVED on inspection: bare OPTIONS without `Access-Control-Request-Method` 500s, but real browser preflights (which always include that header) get a clean 204. Cosmetic test artifact, not a production issue. See the OPTIONS preflight note in §4.
-- **SCM basic auth is currently ON** (was re-enabled during the publish-profile attempt before pivoting to OIDC). Now that OIDC works, can probably be turned back OFF: Function App → Settings → Configuration → General settings → "SCM Basic Auth Publishing Credentials" → Off. Caveat: `Azure/functions-action@v1` may rely on SCM endpoints to introspect deploy status even when auth is OIDC; if a subsequent deploy fails after toggling off, turn back on. Tracked for v0.1.1.
+- ~~**SCM basic auth is currently ON**~~ DISABLED 2026-05-24. Verified that `Azure/functions-action@v1` deploys cleanly via OIDC alone — no SCM endpoint dependency. The caveat we feared (action introspecting deploy status via SCM) did not materialize.
 - ~~**Leftover org-level secret** `AZURE_FUNCTIONAPP_PUBLISH_PROFILE`~~ DELETED 2026-05-24.
 - **Phase 6.x retrofit** — the widget's existing `statuspage.js` direct-fetches Anthropic and OpenAI. Anthropic is CORS-blocked (grey on dashboard); OpenAI works. The retrofit slice switches both to use this proxy (allowlist entries `anthropic-status` and `openai-status` are already in place).
 - **Phase 6.3** — add `webflow-sites` upstream + widget consumer for Webflow CMS health.
