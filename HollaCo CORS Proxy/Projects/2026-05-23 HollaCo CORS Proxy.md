@@ -24,6 +24,20 @@ Created during HollaCo Command Center Phase 6.2 brainstorming once we discovered
 - **Allowlist:** hardcoded in `src/upstreams.js`. Unknown keys return 400.
 - **Auth:** none — every allowlisted upstream is already public.
 
+## Routes
+
+| Method | Route | Since | Purpose | Auth |
+|---|---|---|---|---|
+| GET | `/api/proxy?upstream=<key>` | v0.1.0 | Re-serve CORS-blocked public endpoints (allowlist in `src/upstreams.js`) | Allowlist only |
+| POST | `/api/claude` | v0.2.0 | Forward `{prompt, widgetState}` to Anthropic Messages API; rate-limited | Anonymous + rate limit |
+
+## Application Settings (Function App env vars)
+
+| Name | Purpose | Since |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | Anthropic API key (secret) | v0.2.0 |
+| `ANTHROPIC_MODEL` | Claude model id (e.g. `claude-sonnet-4-6`); change-and-restart to swap | v0.2.0 |
+
 ## Current upstreams (v0.1.1)
 
 | Key | Upstream URL | Consumer |
@@ -41,6 +55,7 @@ Created during HollaCo Command Center Phase 6.2 brainstorming once we discovered
 |---|---|---|
 | 0.1.0 | 2026-05-23 | Initial release. n8n-cloud-health live, two retrofit placeholders in allowlist. |
 | 0.1.1 | 2026-05-24 | Added webflow-status allowlist entry. Reserved-comment block updated for Anthropic retrofit (widget v1.5.1 now consumes anthropic-status). |
+| 0.2.0 | 2026-05-26 | Added `POST /api/claude` route. New `src/rateLimit.js` helper (per-IP 60/min + global 1000/day, in-memory). Two new Application Settings: `ANTHROPIC_API_KEY` + `ANTHROPIC_MODEL`. `package.json#main` switched to `src/functions/*.js` glob (single-file main silently broke the new function until fixed — see [[../Daily/2026-05-26 v0.2.0 (Ask Claude + main glob fix)|v0.2.0 journal]]). Supports HollaCo Command Center Phase 7.0 (v1.6.0+). |
 
 ## References
 
