@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "description": "HollaCo CORS proxy — Azure Function that re-serves an allowlist of CORS-blocked public URLs with Access-Control-Allow-Origin: *. Consumed by HollaCo Command Center widget for n8n / Webflow / Statuspage.io probes.",
   "type": "module",
-  "main": "src/functions/proxy.js",
+  "main": "src/functions/*.js",
   "scripts": {
     "start": "func start",
     "typecheck": "tsc --noEmit -p jsconfig.json",
