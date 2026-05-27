@@ -55,6 +55,8 @@ Created during HollaCo Command Center Phase 6.2 brainstorming once we discovered
 |---|---|---|
 | 0.2.1 | 2026-05-27 | `widgetState` cap raised 20K → 64K (unblocks widget Phase 7.1 wiki grounding). Single-constant change; see [[../Daily/2026-05-27 v0.2.1 (widgetState cap raise)|v0.2.1 journal]]. |
 | 0.2.0 | 2026-05-26 | Added `POST /api/claude` route. New `src/rateLimit.js` helper (per-IP 60/min + global 1000/day, in-memory). Two new Application Settings: `ANTHROPIC_API_KEY` + `ANTHROPIC_MODEL`. `package.json#main` switched to `src/functions/*.js` glob (single-file main silently broke the new function until fixed — see [[../Daily/2026-05-26 v0.2.0 (Ask Claude + main glob fix)|v0.2.0 journal]]). Supports HollaCo Command Center Phase 7.0 (v1.6.0+). |
+| 0.1.1 | 2026-05-24 | Added webflow-status allowlist entry. Reserved-comment block updated for Anthropic retrofit (widget v1.5.1 now consumes anthropic-status). |
+| 0.1.0 | 2026-05-23 | Initial release. n8n-cloud-health live, two retrofit placeholders in allowlist. |
 
 ## References
 
