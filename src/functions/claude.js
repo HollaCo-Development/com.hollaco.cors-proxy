@@ -3,7 +3,7 @@ import { checkRateLimit } from '../rateLimit.js';
 
 const UPSTREAM_TIMEOUT_MS = 20000;
 const MAX_PROMPT_CHARS = 4000;
-const MAX_WIDGET_STATE_CHARS = 20000;
+const MAX_WIDGET_STATE_CHARS = 64000;
 const MAX_OUTPUT_TOKENS = 1500;
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const ANTHROPIC_VERSION = '2023-06-01';

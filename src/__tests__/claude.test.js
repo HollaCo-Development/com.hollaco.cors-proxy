@@ -55,10 +55,22 @@ describe('claude handler — input validation', () => {
     expect(JSON.parse(res.body).error).toContain('prompt too long');
   });
 
-  it('returns 400 when widgetState exceeds 20000 chars', async () => {
-    const res = await handler(makeReq({ body: { prompt: 'hi', widgetState: 'a'.repeat(20001) } }), ctx);
+  it('returns 400 when widgetState exceeds 64000 chars', async () => {
+    const res = await handler(makeReq({ body: { prompt: 'hi', widgetState: 'a'.repeat(64001) } }), ctx);
     expect(res.status).toBe(400);
     expect(JSON.parse(res.body).error).toContain('widgetState too long');
+  });
+
+  it('accepts widgetState at exactly 64000 chars', async () => {
+    /** @type {*} */ (global.fetch).mockResolvedValue({
+      ok: true, status: 200,
+      json: () => Promise.resolve({
+        content: [{ type: 'text', text: 'ok' }],
+        usage: { input_tokens: 1, output_tokens: 1 }
+      })
+    });
+    const res = await handler(makeReq({ body: { prompt: 'hi', widgetState: 'a'.repeat(64000) } }), ctx);
+    expect(res.status).toBe(200);
   });
 });
 
