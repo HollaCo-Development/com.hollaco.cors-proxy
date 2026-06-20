@@ -1,0 +1,88 @@
+# hollaco-playbook: security v1
+name: File Errata
+
+"on":
+  issues:
+    types: [opened, labeled]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  file-errata:
+    if: |
+      contains(github.event.issue.labels.*.name, 'security') ||
+      contains(github.event.issue.labels.*.name, 'cve')
+    runs-on: ubuntu-latest
+    env:
+      AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZURE_DEVOPS_EXT_PAT }}
+      ADO_ORG: https://dev.azure.com/hollaco
+      ADO_PROJECT: HollaCo
+      ADO_AREA: HollaCo\Errata
+    steps:
+      - name: Sign in to Azure DevOps
+        run: |
+          az extension add --name azure-devops --only-show-errors
+          echo "$AZURE_DEVOPS_EXT_PAT" | az devops login --organization "$ADO_ORG"
+          az devops configure --defaults organization="$ADO_ORG" project="$ADO_PROJECT"
+
+      - name: Build payload from event
+        id: payload
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          event_json=$(cat "$GITHUB_EVENT_PATH")
+          payload=$(jq -nc \
+            --arg repo "$REPO" \
+            --argjson e "$event_json" '
+              {
+                title:    "[Triage] \($repo): \($e.issue.title)",
+                severity: "Medium",
+                url:      $e.issue.html_url,
+                source:   "GitHub Issue #\($e.issue.number)",
+                body:     ($e.issue.body // "")
+              }')
+          echo "json=$payload" >> "$GITHUB_OUTPUT"
+
+      - name: Create Errata work item
+        env:
+          PAYLOAD: ${{ steps.payload.outputs.json }}
+        run: |
+          set -euo pipefail
+          title=$(jq -r '.title'    <<<"$PAYLOAD")
+          sev=$(jq   -r '.severity' <<<"$PAYLOAD")
+          url=$(jq   -r '.url'      <<<"$PAYLOAD")
+          src=$(jq   -r '.source'   <<<"$PAYLOAD")
+          body=$(jq  -r '.body'     <<<"$PAYLOAD")
+
+          fields=(
+            "Custom.Severity02=$sev"
+            "Custom.AdvisoryURL=$url"
+          )
+
+          description=$(printf '<p><b>Source:</b> %s</p><p><a href="%s">%s</a></p><hr/><pre>%s</pre>' \
+            "$src" "$url" "$url" "$(echo "$body" | sed 's/[&<>]/ /g')")
+
+          az boards work-item create \
+            --type "HollaCo-Errata.Errata" \
+            --title "$title" \
+            --area "$ADO_AREA" \
+            --description "$description" \
+            --fields "${fields[@]}" \
+            --output json > work-item.json
+
+          id=$(jq -r '.id' work-item.json)
+          echo "Filed Errata #$id"
+          echo "ADO_WORK_ITEM_ID=$id" >> "$GITHUB_ENV"
+
+      - name: Comment back on issue with ADO link
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          url="$ADO_ORG/$ADO_PROJECT/_workitems/edit/$ADO_WORK_ITEM_ID"
+          gh issue comment "${{ github.event.issue.number }}" \
+            --repo "${{ github.repository }}" \
+            --body "Filed as Errata [#$ADO_WORK_ITEM_ID]($url)."

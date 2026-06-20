@@ -1,0 +1,86 @@
+# hollaco-playbook: security v1
+name: Dependabot to Errata Issue
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 13 * * *'  # 13:00 UTC daily — catches CVEs disclosed against existing deps
+
+# Note: GITHUB_TOKEN cannot read Dependabot alerts, and issues it creates do
+# not trigger downstream workflows. Both reads and writes use ERRATA_BOT_PAT
+# (a fine-grained PAT with "Dependabot alerts: Read" and "Issues: Read & Write").
+
+permissions:
+  contents: read
+
+jobs:
+  open-issues-for-high-critical:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.ERRATA_BOT_PAT }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Fetch open high/critical Dependabot alerts
+        id: alerts
+        run: |
+          set -euo pipefail
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            --paginate \
+            "/repos/$REPO/dependabot/alerts?state=open&severity=high,critical&per_page=100" \
+            > alerts.json
+          count=$(jq 'length' alerts.json)
+          echo "Found $count open high/critical alert(s)"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
+      - name: Open issue for each alert (idempotent on GHSA)
+        if: steps.alerts.outputs.count != '0'
+        run: |
+          set -euo pipefail
+          opened=0
+          skipped=0
+          while IFS= read -r alert; do
+            ghsa=$(jq -r '.security_advisory.ghsa_id'                              <<<"$alert")
+            severity=$(jq -r '.security_advisory.severity'                          <<<"$alert")
+            pkg=$(jq -r '.security_vulnerability.package.name'                      <<<"$alert")
+            ecosystem=$(jq -r '.security_vulnerability.package.ecosystem'           <<<"$alert")
+            current=$(jq -r '.security_vulnerability.vulnerable_version_range'      <<<"$alert")
+            fixed=$(jq -r '.security_vulnerability.first_patched_version.identifier // "unknown"' <<<"$alert")
+            summary=$(jq -r '.security_advisory.summary'                            <<<"$alert")
+            url=$(jq -r '.html_url'                                                 <<<"$alert")
+
+            # Idempotency: skip if any existing issue (open or closed) references this GHSA.
+            existing=$(gh issue list --repo "$REPO" --state all \
+              --search "$ghsa in:title,body" \
+              --json number --jq '.[0].number // empty')
+            if [ -n "$existing" ]; then
+              echo "Skip $ghsa — issue #$existing already references it"
+              skipped=$((skipped + 1))
+              continue
+            fi
+
+            title="[Errata] $severity CVE in \`$pkg\` ($ecosystem) — $ghsa"
+            {
+              printf '**Package:** `%s` (%s)\n' "$pkg" "$ecosystem"
+              printf '**Severity:** %s\n' "$severity"
+              printf '**Vulnerable range:** %s\n' "$current"
+              printf '**First patched version:** %s\n' "$fixed"
+              printf '**Advisory:** [%s](%s)\n\n' "$ghsa" "$url"
+              printf '%s\n\n' "$summary"
+              printf -- '---\n'
+              printf 'Filed automatically by `.github/workflows/dependabot-to-errata.yml`. '
+              printf 'The `security` label triggers `file-errata.yml`, which opens a matching '
+              printf 'Errata work item in Azure DevOps and links back here.\n'
+            } > body.md
+
+            gh issue create --repo "$REPO" \
+              --title "$title" \
+              --body-file body.md \
+              --label security \
+              --label cve \
+              --label dependencies
+            opened=$((opened + 1))
+          done < <(jq -c '.[]' alerts.json)
+
+          echo "Opened: $opened · Skipped (already filed): $skipped"
