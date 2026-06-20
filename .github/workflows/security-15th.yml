@@ -1,0 +1,55 @@
+# hollaco-playbook: security v2
+name: Security Scan — Deep (15th)
+
+on:
+  schedule:
+    - cron: '0 9 15 * *'  # 15th of the month, 09:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: npm audit
+        run: npm audit --audit-level=moderate || echo "Vulnerabilities found — review at https://github.com/HollaCo-Development/com.hollaco.cors-proxy/security"
+        continue-on-error: true
+
+  trufflehog:
+    name: Secret Scan (TruffleHog)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: TruffleHog OSS
+        uses: trufflesecurity/trufflehog@v3.95.6
+        with:
+          path: ./
+          extra_args: --only-verified
+
+  notify-failure:
+    name: File Errata on Failure
+    needs: [audit, trufflehog]
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open a security-labelled issue (file-errata.yml routes it to ADO)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "[security-scan] Deep scan failed — run ${{ github.run_id }}" \
+            --label security \
+            --body "The scheduled deep security scan (15th) failed. See ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
