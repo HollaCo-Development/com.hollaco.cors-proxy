@@ -1,0 +1,87 @@
+# hollaco-playbook: security v3
+name: Resolve Errata
+
+"on":
+  issues:
+    types: [closed]
+
+permissions:
+  issues: write
+  contents: read
+
+# Mirror file-errata.yml: serialize per-issue so re-close/label races can't double-act.
+concurrency:
+  group: resolve-errata-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  resolve-errata:
+    if: |
+      contains(github.event.issue.labels.*.name, 'security') ||
+      contains(github.event.issue.labels.*.name, 'cve')
+    runs-on: ubuntu-latest
+    env:
+      AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZURE_DEVOPS_EXT_PAT }}
+      ADO_ORG: https://dev.azure.com/hollaco
+      ADO_PROJECT: HollaCo
+    steps:
+      - name: Sign in to Azure DevOps
+        run: |
+          az extension add --name azure-devops --only-show-errors
+          echo "$AZURE_DEVOPS_EXT_PAT" | az devops login --organization "$ADO_ORG"
+          az devops configure --defaults organization="$ADO_ORG" project="$ADO_PROJECT"
+
+      - name: Find matching Errata work item
+        id: find
+        env:
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+        run: |
+          set -euo pipefail
+          # WIQL matches the DISPLAY name 'Errata' (system name silently returns 0 rows).
+          wiql="SELECT [System.Id], [System.State] FROM workitems WHERE [System.WorkItemType] = 'Errata' AND [Custom.AdvisoryURL] = '$ISSUE_URL'"
+          result=$(az boards query --wiql "$wiql" --output json)
+          id=$(echo "$result" | jq -r 'if length > 0 then (.[0].id|tostring) else "" end')
+          state=$(echo "$result" | jq -r 'if length > 0 then (.[0].fields["System.State"] // "") else "" end')
+          if [ -z "$id" ]; then
+            echo "No Errata work item references $ISSUE_URL — nothing to resolve."
+          else
+            echo "Found Errata #$id in state '$state' for $ISSUE_URL"
+          fi
+          echo "id=$id"       >> "$GITHUB_OUTPUT"
+          echo "state=$state" >> "$GITHUB_OUTPUT"
+
+      - name: Transition to Auto-Resolved (only if New or Triaged)
+        if: steps.find.outputs.id != ''
+        id: transition
+        env:
+          WI_ID: ${{ steps.find.outputs.id }}
+          WI_STATE: ${{ steps.find.outputs.state }}
+        run: |
+          set -euo pipefail
+          case "$WI_STATE" in
+            New|Triaged)
+              az boards work-item update --id "$WI_ID" --state "Auto-Resolved" --output none
+              echo "Transitioned Errata #$WI_ID ($WI_STATE -> Auto-Resolved)"
+              echo "resolved=true" >> "$GITHUB_OUTPUT"
+              ;;
+            "")
+              echo "::warning::Errata #$WI_ID returned an empty state — skipping transition."
+              echo "resolved=false" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "Errata #$WI_ID is in '$WI_STATE' — a human has advanced it; leaving it alone."
+              echo "resolved=false" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+      - name: Comment back on issue
+        if: steps.transition.outputs.resolved == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WI_ID: ${{ steps.find.outputs.id }}
+        run: |
+          set -euo pipefail
+          url="$ADO_ORG/$ADO_PROJECT/_workitems/edit/$WI_ID"
+          gh issue comment "${{ github.event.issue.number }}" \
+            --repo "${{ github.repository }}" \
+            --body "Errata [#$WI_ID]($url) auto-resolved (issue closed while still in triage)."
