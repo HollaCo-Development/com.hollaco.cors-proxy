@@ -30,3 +30,9 @@ This repo keeps an Obsidian vault at `HollaCo CORS Proxy/`. Conventions: [f:\com
 - **Filename rule**: every note is `YYYY-MM-DD Title.md`, no exceptions.
 - **Folders**: `Daily/`, `Projects/`, `Tech/`, `Design/`, `Reports/`.
 - **Front door**: [[Projects/2026-05-23 HollaCo CORS Proxy]].
+
+## Graphify
+
+This repo is indexed into the **HollaCo platform knowledge graph** (`com.hollaco.graphify`, rebuilt daily). Before grepping across repos to answer a cross-repo question, query the graph first with `graphify query "…"`.
+
+Graphify is **pull, not push** — this repo emits nothing and needs no workflow or secret; inclusion is a single line in the grapher's `repos.txt`. Full runbook: [graphify-onboarding-setup.md](../com.hollaco.portfolio/graphify-onboarding-setup.md).
