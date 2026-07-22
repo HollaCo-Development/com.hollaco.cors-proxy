@@ -1,4 +1,4 @@
-# hollaco-playbook: security v1
+# hollaco-playbook: security v4
 name: File Errata
 
 "on":
@@ -8,6 +8,13 @@ name: File Errata
 permissions:
   issues: write
   contents: read
+
+# Serialize runs for the same issue so the dedup check sees prior runs' work.
+# Without this, the multiple events fired when an issue is opened with multiple
+# labels can race and each create a separate Errata before any of them commits.
+concurrency:
+  group: file-errata-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
 
 jobs:
   file-errata:
@@ -27,7 +34,28 @@ jobs:
           echo "$AZURE_DEVOPS_EXT_PAT" | az devops login --organization "$ADO_ORG"
           az devops configure --defaults organization="$ADO_ORG" project="$ADO_PROJECT"
 
+      - name: Check for existing Errata (idempotency)
+        id: dedupe
+        env:
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+        run: |
+          set -euo pipefail
+          # NOTE: System.WorkItemType in WIQL matches the DISPLAY name ('Errata'),
+          # not the system name ('HollaCo-Errata.Errata'). Querying by the system
+          # name silently returns zero results — ADO WIQL gotcha.
+          wiql="SELECT [System.Id] FROM workitems WHERE [System.WorkItemType] = 'Errata' AND [Custom.AdvisoryURL] = '$ISSUE_URL'"
+          result=$(az boards query --wiql "$wiql" --output json)
+          existing=$(echo "$result" | jq -r 'if length > 0 then (.[0].id|tostring) else "" end')
+          if [ -n "$existing" ]; then
+            echo "Found existing Errata #$existing for $ISSUE_URL — skipping create"
+            echo "existing_id=$existing" >> "$GITHUB_OUTPUT"
+          else
+            echo "No existing Errata for $ISSUE_URL; will create one"
+            echo "existing_id=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build payload from event
+        if: steps.dedupe.outputs.existing_id == ''
         id: payload
         env:
           REPO: ${{ github.repository }}
@@ -47,6 +75,7 @@ jobs:
           echo "json=$payload" >> "$GITHUB_OUTPUT"
 
       - name: Create Errata work item
+        if: steps.dedupe.outputs.existing_id == ''
         env:
           PAYLOAD: ${{ steps.payload.outputs.json }}
         run: |
@@ -78,6 +107,7 @@ jobs:
           echo "ADO_WORK_ITEM_ID=$id" >> "$GITHUB_ENV"
 
       - name: Comment back on issue with ADO link
+        if: steps.dedupe.outputs.existing_id == ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
