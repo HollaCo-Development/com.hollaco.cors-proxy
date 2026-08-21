@@ -1,4 +1,4 @@
-# hollaco-playbook: security v1
+# hollaco-playbook: security v5
 name: Dependabot to Errata Issue
 
 on:
@@ -79,8 +79,60 @@ jobs:
               --body-file body.md \
               --label security \
               --label cve \
-              --label dependencies
+              --label dependency
             opened=$((opened + 1))
           done < <(jq -c '.[]' alerts.json)
 
           echo "Opened: $opened · Skipped (already filed): $skipped"
+
+  reconcile-resolved-alerts:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.ERRATA_BOT_PAT }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Fetch GHSAs for all still-open alerts
+        id: open
+        run: |
+          set -euo pipefail
+          # No severity filter here (the opener job filters to high/critical, but the
+          # reconcile set is membership-only): if an alert is still open at ANY severity
+          # — including one reclassified down from high — its GHSA must stay in the set so
+          # we don't close a still-vulnerable errata. The set means "fixed or dismissed".
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            --paginate \
+            "/repos/$REPO/dependabot/alerts?state=open&per_page=100" \
+            > open-alerts.json
+          # One GHSA id per line; empty file if none.
+          jq -r '.[].security_advisory.ghsa_id' open-alerts.json | sort -u > open-ghsas.txt
+          echo "Currently open GHSAs:"; cat open-ghsas.txt || true
+
+      - name: Close [Errata] issues whose GHSA is no longer open
+        run: |
+          set -euo pipefail
+          # Only bot-filed Dependabot errata carry the 'dependency' label.
+          gh issue list --repo "$REPO" --state open --label dependency \
+            --limit 1000 \
+            --json number,title --jq '.[] | [.number, .title] | @tsv' > open-issues.tsv
+          closed=0; kept=0
+          while IFS=$'\t' read -r number title; do
+            [ -z "${number:-}" ] && continue
+            ghsa=$(printf '%s' "$title" | grep -oE 'GHSA-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}' || true)
+            if [ -z "$ghsa" ]; then
+              echo "Issue #$number: no GHSA in title; skipping."
+              kept=$((kept + 1))
+              continue
+            fi
+            if grep -qxF "$ghsa" open-ghsas.txt; then
+              echo "Issue #$number ($ghsa): alert still open; keeping."
+              kept=$((kept + 1))
+            else
+              echo "Issue #$number ($ghsa): alert resolved/dismissed; closing."
+              gh issue comment "$number" --repo "$REPO" \
+                --body "Dependabot alert \`$ghsa\` is no longer open (fix merged or alert dismissed). Closing this errata automatically; the linked Azure DevOps work item will auto-resolve."
+              gh issue close "$number" --repo "$REPO" --reason completed
+              closed=$((closed + 1))
+            fi
+          done < open-issues.tsv
+          echo "Reconcile complete — closed: $closed · kept: $kept"
