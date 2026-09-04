@@ -3,7 +3,7 @@
   "version": "0.2.1",
   "description": "HollaCo CORS proxy — Azure Function that re-serves an allowlist of CORS-blocked public URLs with Access-Control-Allow-Origin: *. Consumed by HollaCo Command Center widget for n8n / Webflow / Statuspage.io probes.",
   "type": "module",
-  "main": "src/functions/*.js",
+  "main": "src/{index.js,functions/*.js}",
   "scripts": {
     "start": "func start",
     "typecheck": "tsc --noEmit -p jsconfig.json",
@@ -11,7 +11,19 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@azure/functions": "^4.5.0"
+    "@azure/functions": "^4.5.0",
+    "@azure/functions-opentelemetry-instrumentation": "^0.3.0",
+    "@azure/monitor-opentelemetry-exporter": "^1.0.0-beta.32",
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/instrumentation": "^0.200.0",
+    "@opentelemetry/instrumentation-undici": "^0.11.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "@opentelemetry/sdk-logs": "^0.200.0",
+    "@opentelemetry/sdk-trace-node": "^2.11.0",
+    "@opentelemetry/semantic-conventions": "^1.43.0"
+  },
+  "overrides": {
+    "@opentelemetry/core": "^2.11.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.10.0",
