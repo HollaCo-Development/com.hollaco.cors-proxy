@@ -37,6 +37,13 @@ Created during HollaCo Command Center Phase 6.2 brainstorming once we discovered
 |---|---|---|
 | `ANTHROPIC_API_KEY` | Anthropic API key (secret) | v0.2.0 |
 | `ANTHROPIC_MODEL` | Claude model id (e.g. `claude-sonnet-4-6`); change-and-restart to swap | v0.2.0 |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | Application Insights ingestion. Absent → `src/index.js` no-ops and nothing is exported | 2026-09-04 |
+
+## Observability
+
+Application Insights via OpenTelemetry, live since 2026-09-04. Host emits request telemetry (`telemetryMode` in `host.json`); the worker (`src/index.js`) emits outbound `fetch` dependencies and worker logs. Full reference: [[../Tech/2026-09-04 Application Insights|Application Insights tech index]].
+
+Three load-bearing pieces, each of which fails **silently** if broken: `host.json#telemetryMode`, `src/index.js`, and `package.json#main` including `src/index.js`.
 
 ## Current upstreams (v0.1.1)
 
@@ -53,6 +60,7 @@ Created during HollaCo Command Center Phase 6.2 brainstorming once we discovered
 
 | Version | Date | Notes |
 |---|---|---|
+| _(unversioned)_ | 2026-09-04 | Application Insights wired via OpenTelemetry — `host.json#telemetryMode`, new `src/index.js` bootstrap, `main` extended to `src/{index.js,functions/*.js}`. Dependency telemetry went from zero to working; the Anthropic hop in `/api/claude` is now observable. Also cleared two dev-only `high` advisories and added `.github/dependabot.yml`. Commits `dba1916` (#20) and `7578e34` (#21). **`package.json` was not bumped — still `0.2.1`.** See [[../Daily/2026-09-04 Application Insights via OpenTelemetry\|2026-09-04 journal]]. |
 | 0.2.1 | 2026-05-27 | `widgetState` cap raised 20K → 64K (unblocks widget Phase 7.1 wiki grounding). Single-constant change; see [[../Daily/2026-05-27 v0.2.1 (widgetState cap raise)|v0.2.1 journal]]. |
 | 0.2.0 | 2026-05-26 | Added `POST /api/claude` route. New `src/rateLimit.js` helper (per-IP 60/min + global 1000/day, in-memory). Two new Application Settings: `ANTHROPIC_API_KEY` + `ANTHROPIC_MODEL`. `package.json#main` switched to `src/functions/*.js` glob (single-file main silently broke the new function until fixed — see [[../Daily/2026-05-26 v0.2.0 (Ask Claude + main glob fix)|v0.2.0 journal]]). Supports HollaCo Command Center Phase 7.0 (v1.6.0+). |
 | 0.1.1 | 2026-05-24 | Added webflow-status allowlist entry. Reserved-comment block updated for Anthropic retrofit (widget v1.5.1 now consumes anthropic-status). |
@@ -61,5 +69,7 @@ Created during HollaCo Command Center Phase 6.2 brainstorming once we discovered
 ## References
 
 - [[../Daily/2026-05-23 Bootstrap|Bootstrap journal]]
+- [[../Tech/2026-09-04 Application Insights|Application Insights tech index]]
+- [[../Daily/2026-09-04 Application Insights via OpenTelemetry|2026-09-04 telemetry journal]]
 - Setup walkthrough: `docs/setup-conventions.md` (added in a later commit during this slice)
 - Consumer: [[../../../hollaco-command-center/HollaCo Command/Projects/2026-05-20 HollaCo Command Center|HollaCo Command Center]]
