@@ -35,4 +35,10 @@ Requires Azure Functions Core Tools v4: `npm install -g azure-functions-core-too
 
 ## Deploy
 
-GitHub Actions deploys on push to `main`. First-time Azure setup (Function App creation, custom domain binding, publish profile) is documented in `docs/setup-conventions.md` (added in a later commit during this slice).
+GitHub Actions deploys on push to `main`, authenticating to Azure with an Entra federated credential (OIDC — no publish profile, no stored secret). First-time Azure setup (Function App creation, custom domain binding, OIDC setup) is documented in [docs/setup-conventions.md](docs/setup-conventions.md).
+
+## Monitoring
+
+Telemetry goes to Application Insights (`hollaco-cors-proxy`) via OpenTelemetry — requests, outbound dependencies, and worker logs. Setup and verification queries: [docs/setup-conventions.md](docs/setup-conventions.md) §7.
+
+If you change `package.json#main`, `host.json`, or `src/index.js`, re-run the verification in §7. All three fail silently — the proxy keeps serving traffic and simply stops reporting.

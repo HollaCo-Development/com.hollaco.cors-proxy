@@ -182,6 +182,62 @@ To rotate the role assignment scope (e.g. narrow from RG-level to App-level):
 
 Flex Consumption: pay only for executions. At ~6k req/day (HollaCo Command Center widget × 3 users × 11 fetchers × ~30 refreshes/day, of which only ~3 hit the proxy) we're well under the 1M req/month free allowance. If costs become non-trivial: Application Insights → Metrics → Function execution count.
 
+**Application Insights ingest** is the other cost surface. The daily cap is the default **100 GB** (90% warning threshold), which is effectively no cap — fine at current volume (tens of records/day), but this is a public anonymous endpoint, so a traffic spike translates directly into ingest spend. To lower it:
+
+```powershell
+az monitor app-insights component billing update -g hollaco-cors-proxy-rg -a hollaco-cors-proxy --cap 1
+```
+
+## 7. Telemetry (Application Insights via OpenTelemetry)
+
+Live since 2026-09-04. Full background: [[../HollaCo CORS Proxy/Tech/2026-09-04 Application Insights]].
+
+### What's wired
+
+| Piece | File | Emits |
+|---|---|---|
+| Host | `host.json` → `"telemetryMode": "OpenTelemetry"` | Request telemetry |
+| Worker | `src/index.js` | Outbound `fetch` dependencies + worker logs |
+| Entry point | `package.json` → `"main": "src/{index.js,functions/*.js}"` | — (loads the above) |
+
+Plus the `APPLICATIONINSIGHTS_CONNECTION_STRING` Application Setting. Absent → `src/index.js` no-ops with a console line, so local `func start` doesn't try to export.
+
+Component: `hollaco-cors-proxy`, workspace-based into the Sentinel workspace `hollaco-sentinel-us-east-001`, 90-day retention.
+
+### Three ways this breaks silently
+
+Worth knowing before touching any of it — none of these produce an error:
+
+1. **Drop `src/index.js` from `main`** → bootstrap never loads, no telemetry at all. Same failure shape as the v0.2.0 main-glob bug.
+2. **Use `AzureFunctionsInstrumentation` instead of `AzureFunctionsInstrumentationESM`** → no invocation spans. The repo is ESM (`"type": "module"`); the non-ESM class patches via the require hook and cannot work here.
+3. **Remove the logger provider from `src/index.js`** → `ctx.log()` output vanishes. `registerAzFunc()` sets `WorkerOpenTelemetryEnabled`, which stops the *host* forwarding worker logs, so the logger provider becomes the only path.
+
+Do **not** add `useAzureMonitor()` or any HTTP instrumentation to the worker — the host already emits request telemetry and both would double-count.
+
+Do **not** bump the OpenTelemetry packages individually. `@azure/monitor-opentelemetry-exporter` targets one OTel generation (currently 0.200); mixing generations fails at runtime, not install. `.github/dependabot.yml` groups them for this reason.
+
+### Verify telemetry is flowing
+
+> **Use `-o json`, never `-o table`.** `az monitor app-insights query ... -o table` prints nothing even when rows exist — verified with a `print control_row=42` control query. An empty table looks identical to a dead pipeline.
+
+```powershell
+# 1. Drive traffic
+curl -sS -o /dev/null -w '%{http_code}\n' "https://proxy.hollaco.com/api/proxy?upstream=vercel-status"
+
+# 2. Wait 1-3 min for ingestion, then confirm NON-ZERO counts
+az monitor app-insights query -g hollaco-cors-proxy-rg -a hollaco-cors-proxy -o json `
+  --analytics-query "union isfuzzy=true requests, dependencies, traces | where timestamp > ago(30m) | summarize n=count() by itemType"
+```
+
+`dependencies > 0` is the signal that matters — that is exactly what was missing before this was wired.
+
+For a real correctness check, confirm dependencies are *correlated to their parent request*: a `200` should carry dependencies, and a `400` (unknown upstream) should carry **zero**, because it returns before any outbound fetch. A bare `dependencies > 0` assertion passes even with a broken trace tree.
+
+### Known limitations
+
+- **Portal log streaming does not work** under `telemetryMode: OpenTelemetry` (documented Microsoft behaviour). Use Live Metrics or KQL.
+- **Hooks cannot be verified locally.** Outside a real Functions host, `@azure/functions` runs in test mode and skips registering the log and `preInvocation` hooks. Only a deployed invocation proves they fire — don't write a local test asserting otherwise.
+
 ## Known issues / follow-ups (v0.1.0)
 
 - ~~**OPTIONS preflight returns 500.**~~ RESOLVED on inspection: bare OPTIONS without `Access-Control-Request-Method` 500s, but real browser preflights (which always include that header) get a clean 204. Cosmetic test artifact, not a production issue. See the OPTIONS preflight note in §4.
