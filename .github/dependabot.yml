@@ -1,0 +1,49 @@
+# Scheduled version updates.
+#
+# Unlike com.hollaco.www, this repo takes a blanket npm config rather than an
+# `allow` list. www scopes narrowly so one PR that matters is not buried; this
+# repo has a handful of direct dependencies, so there is nothing to bury.
+#
+# This file exists because Dependabot SECURITY updates alone were not enough.
+# Alerts scoped `development` are auto-dismissed by GitHub — brace-expansion
+# (GHSA-mh99-v99m-4gvg, GHSA-rgw5-rvv9-x895) and nanoid (GHSA-2v37-7h3g-55p8)
+# were all auto-dismissed on 2026-08-17 — which suppresses the security PR and
+# leaves the dependency pinned on a vulnerable version indefinitely. Because
+# auto-dismissed alerts are not `state=open`, dependabot-to-errata.yml never
+# sees them either. Scheduled updates are what close that gap.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      # The OpenTelemetry packages must move together. @azure/monitor-
+      # opentelemetry-exporter targets one OTel generation at a time, and
+      # mixing generations breaks at runtime, not at install: on the 0.222
+      # line AzureMonitorLogExporter has no forceFlush, which sdk-logs 0.222
+      # requires and throws on at shutdown. Grouping keeps them in step.
+      opentelemetry:
+        patterns:
+          - "@opentelemetry/*"
+          - "@azure/monitor-opentelemetry-exporter"
+          - "@azure/functions-opentelemetry-instrumentation"
+      dev-dependencies:
+        dependency-type: development
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    labels:
+      - dependencies
+
+  # Catches action drift such as the deprecated Node 20 runtimes that
+  # actions/checkout@v4, actions/setup-node@v4 and azure/login@v2 currently
+  # warn about on every deploy.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "ci(deps)"
+    labels:
+      - dependencies
