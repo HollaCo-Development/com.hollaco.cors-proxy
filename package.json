@@ -14,13 +14,13 @@
     "@azure/functions": "^4.5.0",
     "@azure/functions-opentelemetry-instrumentation": "^0.3.0",
     "@azure/monitor-opentelemetry-exporter": "^1.0.0-beta.32",
-    "@opentelemetry/api": "^1.9.1",
-    "@opentelemetry/instrumentation": "^0.200.0",
-    "@opentelemetry/instrumentation-undici": "^0.11.0",
+    "@opentelemetry/api": "^1.10.0",
+    "@opentelemetry/instrumentation": "^0.300.0",
+    "@opentelemetry/instrumentation-undici": "^0.34.0",
     "@opentelemetry/resources": "^2.11.0",
-    "@opentelemetry/sdk-logs": "^0.200.0",
-    "@opentelemetry/sdk-trace-node": "^2.11.0",
-    "@opentelemetry/semantic-conventions": "^1.43.0"
+    "@opentelemetry/sdk-logs": "^3.0.0",
+    "@opentelemetry/sdk-trace-node": "^2.12.0",
+    "@opentelemetry/semantic-conventions": "^1.44.0"
   },
   "overrides": {
     "@opentelemetry/core": "^2.11.0"
